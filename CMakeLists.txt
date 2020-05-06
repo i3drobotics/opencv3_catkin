@@ -22,7 +22,81 @@ ExternalProject_Add(${CONTRIB_NAME}
 
 SET(OPENCV_SRC_PATH "opencv3_src")
 SET(OPENCV_BUILD_PATH "opencv3_build")
-ExternalProject_Add(opencv3_src
+if (WITH_CUDA)
+  ExternalProject_Add(opencv3_src
+    DEPENDS ${CONTRIB_NAME}
+    URL https://github.com/opencv/opencv/archive/3.4.2.zip
+    URL_MD5 9e9ebe9c1fe98c468f6e53f5c3c49716
+    UPDATE_COMMAND ""
+    SOURCE_DIR ${OPENCV_SRC_PATH}
+    BINARY_DIR ${OPENCV_BUILD_PATH}
+    PATCH_COMMAND patch -p0 < ${CMAKE_SOURCE_DIR}/fix_python_discovery.patch &&
+                  patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/rename_unordered_map_definition.patch
+    CONFIGURE_COMMAND cd ../${OPENCV_BUILD_PATH} && cmake
+      -DOPENCV_EXTRA_MODULES_PATH=../${CONTRIB_NAME}_src/modules .
+      -DWITH_TBB=ON
+      -DBUILD_opencv_python2=ON
+      -DBUILD_opencv_python3=ON
+      -DWITH_GTK_2_X=ON  # Can't use GTK3 as it links against system protobuf.
+      -DWITH_PROTOBUF=OFF # Disable custom build of protobuf, since starting with OpenCV 3.4.2 a custom version of
+                          # protobuf is always pulled and compiled, even if no enabled modules use it.
+      -DWITH_V4L=ON
+      -DINSTALL_C_EXAMPLES=OFF
+      -DINSTALL_PYTHON_EXAMPLES=OFF
+      -DBUILD_EXAMPLES=OFF
+      -DWITH_QT=OFF # Needed by clang under Ubuntu 14.04 and GTK_WIDGET(cvGetWindowHandle(...)) with gcc (image_view)
+      -DWITH_OPENGL=ON
+      -DWITH_VTK=ON
+      -DENABLE_PRECOMPILED_HEADERS=OFF
+      -DCMAKE_INSTALL_PREFIX=${CATKIN_DEVEL_PREFIX}
+      -DBUILD_SHARED_LIBS=ON
+      -DWITH_CUDA=ON
+      -DWITH_OPENCL=OFF
+      -DBUILD_TESTS=OFF
+      -DBUILD_opencv_ts=OFF
+      -DBUILD_TESTS=OFF
+      -DENABLE_FAST_MATH=ON
+      -DCUDA_FAST_MATH=ON
+      -DWITH_CUBLAS=ON
+      -DBUILD_opencv_cudacodec=OFF # Needed to fix this issue https://github.com/opencv/opencv_contrib/issues/1786
+      # opencv_contrib packages
+      -DBUILD_opencv_dnn=OFF # Pulls in the system protobuf as a dependency!
+      -DBUILD_opencv_dnns_easily_fooled=OFF
+      -DBUILD_opencv_cnn_3dobj=OFF
+      -DBUILD_opencv_aruco=ON
+      -DBUILD_opencv_bgsegm=OFF
+      -DBUILD_opencv_bioinspired=OFF
+      -DBUILD_opencv_ccalib=OFF
+      -DBUILD_opencv_contrib_world=OFF
+      -DBUILD_opencv_datasets=OFF
+      -DBUILD_opencv_dpm=OFF
+      -DBUILD_opencv_face=OFF
+      -DBUILD_opencv_fuzzy=OFF
+      -DBUILD_opencv_freetype=OFF
+      -DBUILD_opencv_hdf=OFF
+      -DBUILD_opencv_line_descriptor=ON
+      -DBUILD_opencv_matlab=OFF
+      -DBUILD_opencv_optflow=OFF
+      -DBUILD_opencv_plot=OFF
+      -DBUILD_opencv_reg=OFF
+      -DBUILD_opencv_rgbd=ON
+      -DBUILD_opencv_saliency=ON
+      -DBUILD_opencv_sfm=OFF
+      -DBUILD_opencv_stereo=OFF
+      -DBUILD_opencv_structured_light=OFF
+      -DBUILD_opencv_surface_matching=OFF
+      -DBUILD_opencv_text=OFF
+      -DBUILD_opencv_tracking=OFF
+      -DBUILD_opencv_xfeatures2d=ON
+      -DBUILD_opencv_ximgproc=ON
+      -DBUILD_opencv_xobjdetect=OFF
+      -DBUILD_opencv_nonfree=OFF
+      -DBUILD_opencv_xphoto=OFF ../${OPENCV_SRC_PATH}
+    BUILD_COMMAND cd ../${OPENCV_BUILD_PATH} && make -j8
+    INSTALL_COMMAND cd ../${OPENCV_BUILD_PATH} && make install -j8
+  )
+else (WITH_CUDA)
+  ExternalProject_Add(opencv3_src
   DEPENDS ${CONTRIB_NAME}
   URL https://github.com/opencv/opencv/archive/3.4.2.zip
   URL_MD5 9e9ebe9c1fe98c468f6e53f5c3c49716
@@ -89,7 +163,8 @@ ExternalProject_Add(opencv3_src
     -DBUILD_opencv_xphoto=OFF ../${OPENCV_SRC_PATH}
   BUILD_COMMAND cd ../${OPENCV_BUILD_PATH} && make -j8
   INSTALL_COMMAND cd ../${OPENCV_BUILD_PATH} && make install -j8
-)
+  )
+endif()
 
 install(DIRECTORY ${CATKIN_DEVEL_PREFIX}/include/opencv
         DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
